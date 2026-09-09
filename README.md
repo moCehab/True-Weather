@@ -1,45 +1,100 @@
 # True Weather
 
-A responsive weather website using JetBrains Mono, weather-aware backgrounds, worldwide city search, browser geolocation, today/tomorrow forecasts and practical daily advice.
+**What the weather actually means for your day.**
 
-## Publish on your GitHub repository
+True Weather turns forecasts into practical answers: what to wear, what to bring, when conditions may change, and when to head outside.
 
-1. Push this project, including `.github/workflows/pages.yml`, to your repository's `main` branch. Do not upload `node_modules`, `dist`, or `.git` via the GitHub website.
-2. Open the repository's **Settings → Pages → Build and deployment**. Select **GitHub Actions** as the source.
-3. Open **Actions → Deploy True Weather to GitHub Pages → Run workflow**. Future pushes to `main` deploy automatically. If your default branch has another name, update the workflow's branch setting.
-4. After the workflow succeeds, find your website URL in **Settings → Pages** or the deployment's environment link.
+Instead of making people interpret a screen full of numbers, it puts useful advice first and keeps the hourly forecast one step away.
 
-The workflow detects the Pages base path, so both `username.github.io/repository/` and a configured custom domain are supported. No repository URL or personal access token belongs in the code. The workflow uses GitHub's built-in deployment credentials.
+## Features
 
-GitHub Free supports Pages from public repositories; private-repository Pages requires an eligible paid GitHub plan. See [GitHub Pages workflow documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+- **Today and tomorrow:** concise forecasts focused on daily decisions.
+- **Rain timing:** guidance on when precipitation becomes more likely or may ease.
+- **Clothing advice:** suggestions based on how the temperature will feel.
+- **Outdoor windows:** relatively dry, comfortable daylight periods for walks and errands.
+- **Worldwide city search:** search for a city or use device location with permission.
+- **Weather-aware backgrounds:** appearance changes with forecast conditions and day or night.
+- **Hourly details:** temperature, feels-like temperature, precipitation probability, and wind.
+- **Responsive layout:** designed for desktop and mobile, with JetBrains Mono typography.
 
-## Local development and checks
+## How it works
+
+Forecast and location data come from [Open-Meteo](https://open-meteo.com/). A rule-based interpretation layer converts hourly weather data into plain-language guidance.
+
+Advice considers precipitation probability, precipitation amounts, weather codes, apparent temperature, and wind. Outdoor recommendations look for consecutive daylight hours with suitable conditions. Forecast times follow the selected location’s timezone.
+
+Forecasts refresh approximately every 15 minutes while the page is active. Older data is labeled when an update fails. Weather predictions remain estimates; the advice does not replace official weather warnings.
+
+## Getting started
+
+Requires Node.js 22.13 or later and npm.
 
 ```sh
+git clone https://github.com/moCehab/True-Weather.git
+cd True-Weather
 npm ci
 npm run dev
 ```
+
+Open the local address printed in the terminal.
+
+## Build and deploy
+
+### GitHub Pages
+
+```sh
+npm run build:pages
+```
+
+The static website is generated in `dist/pages`. This build requests weather data directly from Open-Meteo and does not require a separate application server.
+
+The included GitHub Actions workflow handles deployment:
+
+1. In the repository, open **Settings → Pages** and select **GitHub Actions** as the source.
+2. Push changes to `main`, or run **Deploy True Weather to GitHub Pages** from the **Actions** tab.
+3. Find the published URL in **Settings → Pages** after deployment succeeds.
+
+The workflow configures the base path for the repository automatically. For a local build targeting a repository path:
+
+```sh
+PAGES_BASE_PATH=/True-Weather npm run build:pages
+PAGES_BASE_PATH=/True-Weather node scripts/check-pages.mjs
+```
+
+### Server-backed build
+
+```sh
+npm run build
+```
+
+The server-backed version uses Vinext and Cloudflare Workers-compatible output, with forecast and city-search API routes.
+
+## Development checks
 
 ```sh
 npx tsc --noEmit
 node --experimental-strip-types --test tests/*.test.mjs
 npm run build:pages
+node scripts/check-pages.mjs
 ```
 
-The Pages build is written to `dist/pages`. To test a repository path, use `PAGES_BASE_PATH=/your-repository npm run build:pages` on macOS/Linux. The normal `npm run build` preserves the original server-backed build, while `build:pages` builds the same weather interface as a standalone Vite application for static hosting.
+Tests cover forecast interpretation, elapsed hours, nighttime conditions, direct API requests, caching, and failed or incomplete responses. The static-output check verifies asset paths and direct weather-provider integration.
 
-## Live weather on GitHub Pages
+## Project structure
 
-Pages cannot run the project's optional server API routes. In the Pages build, the browser calls Open-Meteo's public forecast and geocoding HTTPS APIs directly. No secret is embedded. Successful forecasts are cached in memory per browser tab for 15 minutes and refreshed while the tab is visible, and when returning to it. Cache size is bounded. Requests are debounced/canceled where appropriate; timeouts and failed updates are surfaced without silently inventing forecasts.
+```text
+app/          Weather interface and server API routes
+components/   Reusable interface components
+lib/          Forecast interpretation and data access
+pages/        Static website entry point
+public/       Background image and favicon
+scripts/      GitHub Pages build and output checks
+tests/        Forecast and data-access tests
+.github/      Deployment workflow
+```
 
-Times use the forecast location's timezone. Device coordinates are requested only after the user chooses “Use my location” and grants browser permission. There is no account or persistent location storage.
+## Data and privacy
 
-Open-Meteo attribution appears in the footer. Confirm provider licensing, usage limits and a suitable plan before monetizing; the public no-key endpoint is for the initial non-commercial evaluation.
+Location access is optional and requires browser permission. Coordinates are sent to the weather provider to retrieve the local forecast. No account is required, and the application does not persist location preferences.
 
-## Interpretation and validation
-
-Advice is deterministic, not LLM-generated. Precipitation probability, amounts and weather codes determine rain advice. Apparent temperature drives clothing advice. Outdoor windows require three consecutive dry daylight observations, apparent temperature above 0 and below 35°C, wind below 35 km/h and no fog, storm or snow codes. These are general-purpose heuristics, not official alerts or personalized guidance.
-
-Type checking and eight automated tests cover forecast interpretation, direct browser API transport, caching and response failures. The static build is checked for correct asset paths and absence of a server requirement. Browser interaction QA was not requested. The optional feature-detected WebMCP read-back remains unverified because no supported validation context was available.
-
-No website has been published to GitHub yet. The repository and Pages settings remain under your control.
+Weather data is attributed to Open-Meteo. Review the provider’s current [usage terms](https://open-meteo.com/en/terms) before commercial deployment.
